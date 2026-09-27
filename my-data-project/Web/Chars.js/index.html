@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard ราคาสินค้าเกษตร (Chart.js Version)</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <h1>🌾 ระบบวิเคราะห์และแสดงผลราคาสินค้าเกษตร</h1>
+            <p>Data Visualization Dashboard (Chart.js Version)</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+
+        <!-- Filter Area -->
+        <section class="filter-card">
+            <div class="filter-group">
+                <label for="category-select"><strong>เลือกหมวดหมู่สินค้า:</strong></label>
+                <select id="category-select">
+                    <option value="all">ทั้งหมด (All Categories)</option>
+                    <option value="crops">พืชไร่ / ธัญพืช</option>
+                    <option value="fruits">ผลไม้</option>
+                    <option value="vegetables">ผักสด</option>
+                    <option value="economic">พืชเศรษฐกิจ</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="time-select"><strong>ช่วงเวลา:</strong></label>
+                <select id="time-select">
+                    <option value="7d">7 วันล่าสุด</option>
+                    <option value="30d">30 วันล่าสุด</option>
+                    <option value="1y">1 ปีที่ผ่านมา</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Charts Grid (4 Charts Area) -->
+        <div class="charts-grid">
+
+            <!-- Chart 1: Line Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3>1. แนวโน้มราคาตามช่วงเวลา (Line Chart)</h3>
+                </div>
+                <div class="chart-box">
+                    <canvas id="lineChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 2: Bar Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3>2. เปรียบเทียบราคาสินค้า (Bar Chart)</h3>
+                </div>
+                <div class="chart-box">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 3: Donut Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3>3. สัดส่วนหมวดหมู่สินค้า (Donut Chart)</h3>
+                </div>
+                <div class="chart-box">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 4: Horizontal Bar Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3>4. ราคาเปรียบเทียบตามภูมิภาค (Horizontal Bar)</h3>
+                </div>
+                <div class="chart-box">
+                    <canvas id="horizontalBarChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 Interactive Data Visualization Project | รายวิชา Data Visualization Technology</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

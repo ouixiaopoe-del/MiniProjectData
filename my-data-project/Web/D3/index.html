@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D3.js Interactive Agricultural Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
+    h1 { color: #38bdf8; text-align: center; font-size: 24px; margin-bottom: 20px; }
+    .badge { background: #0369a1; padding: 4px 12px; border-radius: 20px; font-size: 12px; color: #fff; }
+    
+    /* Grid 2x2 */
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px; }
+    .chart-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; min-height: 280px; }
+    .chart-card h3 { font-size: 15px; color: #38bdf8; margin-top: 0; margin-bottom: 12px; }
+    
+    .bar { fill: #38bdf8; transition: fill 0.2s; }
+    .bar:hover { fill: #34d399; }
+    .axis-label { font-size: 10px; fill: #94a3b8; }
+    .domain, .tick line { stroke: #334155; }
+  </style>
+</head>
+<body>
+
+  <h1>🌾 Agricultural Price Dashboard <span class="badge">Version 1: D3.js</span></h1>
+
+  <div class="dashboard-grid">
+    <!-- Graph 1 -->
+    <div class="chart-card">
+      <h3>1. ราคาเฉลี่ยรวมตามประเภทสินค้า (Top Products)</h3>
+      <div id="chart1"></div>
+    </div>
+
+    <!-- Graph 2 -->
+    <div class="chart-card">
+      <h3>2. การเปรียบเทียบราคาเฉลี่ยแยกตามจังหวัด</h3>
+      <div id="chart2"></div>
+    </div>
+
+    <!-- Graph 3 -->
+    <div class="chart-card">
+      <h3>3. สัดส่วนจำนวนสินค้าในแต่ละระดับราคา</h3>
+      <div id="chart3"></div>
+    </div>
+
+    <!-- Graph 4 -->
+    <div class="chart-card">
+      <h3>4. ความหนาแน่นและการกระจายตัวของราคา (Price Matrix)</h3>
+      <div id="chart4"></div>
+    </div>
+  </div>
+
+  <script>
+    // อ่านไฟล์ NEW1.csv ด้วย D3.js (ใช้ delimiter ;)
+    // หมายเหตุ: ตรวจสอบให้มั่นใจว่าไฟล์ NEW1.csv อยู่ในโฟลเดอร์เดียวกับ index.html นี้ หรือปรับ path ให้ถูกต้อง
+    d3.dsv(";", "NEW1.csv").then(data => {
+      // ดำเนินการทำความสะอาดข้อมูล (Clean Data)
+      const cleanData = data.map(d => {
+        const prod = d.Product_Name ? String(d.Product_Name).replace(/"/g, '').trim() : '';
+        const prov = d.Province ? String(d.Province).replace(/"/g, '').trim() : '';
+        const priceVal = d['average(Price_THB)'] ? String(d['average(Price_THB)']).replace(/"/g, '') : '0';
+        return {
+          Product_Name: prod,
+          Province: prov,
+          Price: parseFloat(priceVal) || 0
+        };
+      }).filter(d => d.Product_Name !== '');
+
+      // เรียกวาดกราฟทั้ง 4
+      renderChart1(cleanData);
+      renderChart2(cleanData);
+      renderChart3(cleanData);
+      renderChart4(cleanData);
+    }).catch(err => {
+      console.error("Error loading CSV:", err);
+      document.body.innerHTML += `<div style="color:red; text-align:center; margin-top:20px;">❌ ไม่สามารถโหลดไฟล์ NEW1.csv ได้ กรุณาตรวจสอบตำแหน่งไฟล์</div>`;
+    });
+
+    // 1. Horizontal Bar Chart
+    function renderChart1(data) {
+      const avgByProduct = d3.rollups(data, v => d3.mean(v, d => d.Price), d => d.Product_Name)
+                             .map(([key, value]) => ({ key, value }))
+                             .sort((a,b) => b.value - a.value);
+
+      const margin = {top: 10, right: 20, bottom: 30, left: 120}, width = 420 - margin.left - margin.right, height = 230 - margin.top - margin.bottom;
+      const svg = d3.select("#chart1").append("svg").attr("width", "100%").attr("viewBox", `0 0 420 230`).append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+      const x = d3.scaleLinear().domain([0, d3.max(avgByProduct, d=>d.value)]).range([0, width]);
+      const y = d3.scaleBand().domain(avgByProduct.map(d=>d.key)).range([0, height]).padding(0.2);
+
+      svg.append("g").call(d3.axisLeft(y)).selectAll("text").attr("class", "axis-label");
+      svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x)).selectAll("text").attr("class", "axis-label");
+
+      svg.selectAll(".bar").data(avgByProduct).enter().append("rect").attr("class", "bar")
+         .attr("y", d => y(d.key)).attr("height", y.bandwidth()).attr("x", 0).attr("width", d => x(d.value));
+    }
+
+    // 2. Vertical Bar Chart (By Province)
+    function renderChart2(data) {
+      const avgByProv = d3.rollups(data, v => d3.mean(v, d => d.Price), d => d.Province)
+                          .map(([key, value]) => ({ key, value }));
+
+      const margin = {top: 10, right: 10, bottom: 50, left: 40}, width = 420 - margin.left - margin.right, height = 230 - margin.top - margin.bottom;
+      const svg = d3.select("#chart2").append("svg").attr("width", "100%").attr("viewBox", `0 0 420 230`).append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+      const x = d3.scaleBand().domain(avgByProv.map(d=>d.key)).range([0, width]).padding(0.3);
+      const y = d3.scaleLinear().domain([0, d3.max(avgByProv, d=>d.value)]).range([height, 0]);
+
+      svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x)).selectAll("text").attr("class", "axis-label").attr("transform", "rotate(-30)").style("text-anchor", "end");
+      svg.append("g").call(d3.axisLeft(y)).selectAll("text").attr("class", "axis-label");
+
+      svg.selectAll(".bar").data(avgByProv).enter().append("rect").attr("class", "bar")
+         .attr("x", d => x(d.key)).attr("y", d => y(d.value)).attr("width", x.bandwidth()).attr("height", d => height - y(d.value));
+    }
+
+    // 3. Donut Chart
+    function renderChart3(data) {
+      let low = 0, mid = 0, high = 0;
+      data.forEach(d => {
+        if(d.Price < 120) low++;
+        else if(d.Price <= 140) mid++;
+        else high++;
+      });
+
+      const pieData = [
+        { name: "ต่ำ (<120฿)", value: low },
+        { name: "กลาง (120-140฿)", value: mid },
+        { name: "สูง (>140฿)", value: high }
+      ];
+
+      const svg = d3.select("#chart3").append("svg").attr("width", "100%").attr("viewBox", `0 0 400 220`).append("g").attr("transform", "translate(150,110)");
+      const color = d3.scaleOrdinal().range(["#38bdf8", "#34d399", "#f59e0b"]);
+      const pie = d3.pie().value(d => d.value);
+      const arc = d3.arc().innerRadius(45).outerRadius(85);
+
+      const arcs = svg.selectAll("g.arc").data(pie(pieData)).enter().append("g").attr("class", "arc");
+      arcs.append("path").attr("d", arc).attr("fill", d => color(d.data.name));
+
+      // Legend
+      const legend = d3.select("#chart3 svg").append("g").attr("transform", "translate(270, 60)");
+      pieData.forEach((d, i) => {
+        const row = legend.append("g").attr("transform", `translate(0, ${i * 22})`);
+        row.append("rect").attr("width", 12).attr("height", 12).attr("fill", color(d.name));
+        row.append("text").attr("x", 18).attr("y", 10).text(`${d.name}: ${d.value}`).attr("fill", "#94a3b8").attr("font-size", "11px");
+      });
+    }
+
+    // 4. Scatter Plot Matrix
+    function renderChart4(data) {
+      const margin = {top: 10, right: 20, bottom: 30, left: 110}, width = 420 - margin.left - margin.right, height = 230 - margin.top - margin.bottom;
+      const svg = d3.select("#chart4").append("svg").attr("width", "100%").attr("viewBox", `0 0 420 230`).append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+      const provinces = [...new Set(data.map(d=>d.Province))];
+      const x = d3.scaleLinear().domain([80, 180]).range([0, width]);
+      const y = d3.scalePoint().domain(provinces).range([height, 0]).padding(0.5);
+
+      svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x)).selectAll("text").attr("class", "axis-label");
+      svg.append("g").call(d3.axisLeft(y)).selectAll("text").attr("class", "axis-label");
+
+      svg.selectAll("circle").data(data).enter().append("circle")
+         .attr("cx", d => x(d.Price))
+         .attr("cy", d => y(d.Province))
+         .attr("r", 4)
+         .attr("fill", "#f43f5e")
+         .attr("opacity", 0.7);
+    }
+  </script>
+</body>
+</html>

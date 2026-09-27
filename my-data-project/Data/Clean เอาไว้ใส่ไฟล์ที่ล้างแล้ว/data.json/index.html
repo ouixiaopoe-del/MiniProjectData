@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agricultural Price Dashboard</title>
+  
+  <!-- Libraries: SheetJS, Chart.js, FontAwesome -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-green: #10b981;
+      --accent-blue: #3b82f6;
+      --border-color: #334155;
+    }
+
+    * { box-sizing: border-box; font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 24px; }
+    
+    /* Header */
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+    .header h1 { margin: 0; font-size: 24px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 12px; }
+    
+    /* Export Buttons */
+    .btn-group { display: flex; gap: 10px; }
+    .btn { padding: 10px 16px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
+    .btn-excel { background-color: #059669; color: white; }
+    .btn-excel:hover { background-color: #047857; }
+    .btn-print { background-color: #3b82f6; color: white; }
+    .btn-print:hover { background-color: #2563eb; }
+
+    /* Summary Cards */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .card { background-color: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); }
+    .card-title { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
+    .card-value { font-size: 26px; font-weight: 700; color: var(--accent-green); }
+
+    /* Filters */
+    .filter-section { background-color: var(--card-bg); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+    .filter-control { background-color: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 14px; border-radius: 8px; font-size: 14px; outline: none; }
+    input.filter-control { flex: 2; min-width: 220px; }
+    select.filter-control { flex: 1; min-width: 160px; }
+
+    /* Analytics Charts */
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .chart-card { background-color: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); height: 340px; }
+    .chart-card h3 { margin: 0 0 16px 0; font-size: 16px; color: var(--text-main); }
+    .chart-container { position: relative; height: 250px; width: 100%; }
+
+    /* Data Table */
+    .table-container { background-color: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; max-height: 480px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; min-width: 950px; }
+    th { background-color: #0f172a; color: var(--text-muted); font-size: 12px; text-transform: uppercase; padding: 14px 16px; position: sticky; top: 0; border-bottom: 1px solid var(--border-color); }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-size: 14px; color: var(--text-main); }
+    tr:hover { background-color: #33415540; }
+
+    /* Print Styles */
+    @media print {
+      body { background-color: white; color: black; padding: 0; }
+      .btn-group, .filter-section { display: none !important; }
+      .card, .chart-card, .table-container { border: 1px solid #ccc; background: white; color: black; }
+      th { background: #eee; color: black; }
+      td { color: black; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <div class="header">
+    <h1><i class="fa-solid fa-wheat-awn" style="color: var(--accent-green);"></i> ระบบรายงานราคาสินค้าเกษตร</h1>
+    <div class="btn-group">
+      <button class="btn btn-excel" onclick="exportExcel()"><i class="fa-solid fa-file-excel"></i> ส่งออก Excel</button>
+      <button class="btn btn-print" onclick="window.print()"><i class="fa-solid fa-file-pdf"></i> พิมพ์ / PDF</button>
+    </div>
+  </div>
+
+  <!-- Executive Summary Cards -->
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">รายการทั้งหมด</div>
+      <div class="card-value" id="total-items">0</div>
+    </div>
+    <div class="card">
+      <div class="card-title">ราคาสูงสุด</div>
+      <div class="card-value" id="max-price">0 ฿</div>
+    </div>
+    <div class="card">
+      <div class="card-title">ราคาเฉลี่ยรวม</div>
+      <div class="card-value" id="avg-price">0 ฿</div>
+    </div>
+  </div>
+
+  <!-- Search & Dynamic Filters -->
+  <div class="filter-section">
+    <input type="text" id="search-input" class="filter-control" placeholder="🔍 ค้นหาชื่อสินค้า หรือ ตลาด..." oninput="filterData()">
+    <select id="category-select" class="filter-control" onchange="filterData()">
+      <option value="">-- ทุกหมวดหมู่ --</option>
+    </select>
+    <select id="province-select" class="filter-control" onchange="filterData()">
+      <option value="">-- ทุกจังหวัด --</option>
+    </select>
+  </div>
+
+  <!-- Analytics Section (Bar & Pie Charts) -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>📊 ราคาเฉลี่ยจำแนกตามหมวดหมู่</h3>
+      <div class="chart-container"><canvas id="barChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>📍 สัดส่วนรายการแยกตามจังหวัด (Top 5)</h3>
+      <div class="chart-container"><canvas id="pieChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Interactive Data Table -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>วันที่</th>
+          <th>ชื่อสินค้า</th>
+          <th>หมวดหมู่</th>
+          <th>จังหวัด</th>
+          <th>ตลาด/สถานที่</th>
+          <th>เกรด</th>
+          <th>ราคา (บาท)</th>
+          <th>จำนวน</th>
+          <th>หน่วย</th>
+          <th>เบอร์โทร</th>
+        </tr>
+      </thead>
+      <tbody id="table-body">
+        <tr><td colspan="11" style="text-align:center; color: var(--text-muted);">กำลังโหลดข้อมูลจาก NewClean.xlsx...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    let rawData = [];
+    let filteredData = [];
+    let barChartInstance = null;
+    let pieChartInstance = null;
+
+    // Load Excel File directly
+    fetch('NewClean.xlsx')
+      .then(res => res.arrayBuffer())
+      .then(buffer => {
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        rawData = XLSX.utils.sheet_to_json(sheet);
+        filteredData = [...rawData];
+        
+        setupDropdowns(rawData);
+        filterData();
+      })
+      .catch(err => {
+        console.error(err);
+        document.getElementById('table-body').innerHTML = '<tr><td colspan="11" style="color:red; text-align:center;">ไม่พบไฟล์ NewClean.xlsx กรุณาตรวจสอบตำแหน่งไฟล์</td></tr>';
+      });
+
+    function setupDropdowns(data) {
+      const categories = [...new Set(data.map(i => i.Category).filter(Boolean))];
+      const provinces = [...new Set(data.map(i => i.Province).filter(Boolean))];
+
+      const catSelect = document.getElementById('category-select');
+      categories.forEach(c => catSelect.innerHTML += `<option value="${c}">${c}</option>`);
+
+      const provSelect = document.getElementById('province-select');
+      provinces.forEach(p => provSelect.innerHTML += `<option value="${p}">${p}</option>`);
+    }
+
+    function filterData() {
+      const search = document.getElementById('search-input').value.toLowerCase();
+      const cat = document.getElementById('category-select').value;
+      const prov = document.getElementById('province-select').value;
+
+      filteredData = rawData.filter(item => {
+        const matchSearch = (item.Product_Name && item.Product_Name.toString().toLowerCase().includes(search)) ||
+                            (item.Market_Name && item.Market_Name.toString().toLowerCase().includes(search));
+        const matchCat = !cat || item.Category === cat;
+        const matchProv = !prov || item.Province === prov;
+        return matchSearch && matchCat && matchProv;
+      });
+
+      renderDashboard(filteredData);
+    }
+
+    function renderDashboard(data) {
+      // Summary Metrics
+      document.getElementById('total-items').textContent = data.length.toLocaleString() + ' รายการ';
+      
+      const prices = data.map(item => Number(item.Price_THB) || 0);
+      const max = prices.length ? Math.max(...prices) : 0;
+      const avg = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
+
+      document.getElementById('max-price').textContent = max.toLocaleString() + ' ฿';
+      document.getElementById('avg-price').textContent = avg.toFixed(2).toLocaleString() + ' ฿';
+
+      renderTable(data);
+      renderBarChart(data);
+      renderPieChart(data);
+    }
+
+    function renderTable(data) {
+      const tbody = document.getElementById('table-body');
+      tbody.innerHTML = '';
+      data.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.Transaction_ID || '-'}</td>
+          <td>${item.Date || '-'}</td>
+          <td><strong>${item.Product_Name || '-'}</strong></td>
+          <td>${item.Category || '-'}</td>
+          <td>${item.Province || '-'}</td>
+          <td>${item.Market_Name || '-'}</td>
+          <td>${item.Grade || '-'}</td>
+          <td style="color:var(--accent-green); font-weight:600;">${Number(item.Price_THB || 0).toLocaleString()}</td>
+          <td>${item.Quantity || '-'}</td>
+          <td>${item.Unit || '-'}</td>
+          <td>${item.intact_Phone || '-'}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Option C: Bar & Pie Charts
+    function renderBarChart(data) {
+      const catAvg = {}, catCount = {};
+      data.forEach(item => {
+        const cat = item.Category || 'อื่นๆ';
+        const price = Number(item.Price_THB) || 0;
+        catAvg[cat] = (catAvg[cat] || 0) + price;
+        catCount[cat] = (catCount[cat] || 0) + 1;
+      });
+
+      const labels = Object.keys(catAvg);
+      const values = labels.map(cat => (catAvg[cat] / catCount[cat]).toFixed(2));
+
+      if (barChartInstance) barChartInstance.destroy();
+
+      const ctx = document.getElementById('barChart').getContext('2d');
+      barChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'ราคาเฉลี่ย (บาท)',
+            data: values,
+            backgroundColor: '#10b981',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+            y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
+          }
+        }
+      });
+    }
+
+    function renderPieChart(data) {
+      const provCounts = {};
+      data.forEach(item => {
+        const prov = item.Province || 'ไม่ระบุ';
+        provCounts[prov] = (provCounts[prov] || 0) + 1;
+      });
+
+      // Top 5 Provinces
+      const sorted = Object.entries(provCounts).sort((a,b) => b[1] - a[1]);
+      const top5 = sorted.slice(0, 5);
+      const labels = top5.map(i => i[0]);
+      const values = top5.map(i => i[1]);
+
+      if (pieChartInstance) pieChartInstance.destroy();
+
+      const ctx = document.getElementById('pieChart').getContext('2d');
+      pieChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: values,
+            backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'right', labels: { color: '#94a3b8' } } }
+        }
+      });
+    }
+
+    // Option B: Export Data Function
+    function exportExcel() {
+      const ws = XLSX.utils.json_to_sheet(filteredData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Filtered_Report");
+      XLSX.writeFile(wb, "Agricultural_Price_Report.xlsx");
+    }
+  </script>
+</body>
+</html>

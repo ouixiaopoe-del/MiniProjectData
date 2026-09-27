@@ -1,0 +1,14 @@
+[
+  {"date": "2026-09-01", "name": "ข้าวเปลือกหอมมะลิ", "category": "crops", "price": 15000, "region": "เหนือ"},
+  {"date": "2026-09-02", "name": "ข้าวเปลือกหอมมะลิ", "category": "crops", "price": 15200, "region": "เหนือ"},
+  {"date": "2026-09-03", "name": "ข้าวเปลือกหอมมะลิ", "category": "crops", "price": 15100, "region": "เหนือ"},
+  {"date": "2026-09-04", "name": "ข้าวเปลือกหอมมะลิ", "category": "crops", "price": 15300, "region": "เหนือ"},
+  {"date": "2026-09-05", "name": "ข้าวเปลือกหอมมะลิ", "category": "crops", "price": 15500, "region": "เหนือ"},
+  {"date": "2026-09-01", "name": "ยางพารา", "category": "economic", "price": 68, "region": "ใต้"},
+  {"date": "2026-09-02", "name": "ยางพารา", "category": "economic", "price": 70, "region": "ใต้"},
+  {"date": "2026-09-03", "name": "ยางพารา", "category": "economic", "price": 69, "region": "ใต้"},
+  {"date": "2026-09-04", "name": "ยางพารา", "category": "economic", "price": 72, "region": "ใต้"},
+  {"date": "2026-09-05", "name": "ยางพารา", "category": "economic", "price": 75, "region": "ใต้"},
+  {"date": "2026-09-05", "name": "ทุเรียนหมอนทอง", "category": "fruits", "price": 180, "region": "ตะวันออก"},
+  {"date": "2026-09-05", "name": "ผักกาดหอม", "category": "vegetables", "price": 45, "region": "กลาง"}
+]
